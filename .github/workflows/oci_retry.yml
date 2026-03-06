@@ -55,4 +55,6 @@ jobs:
         # 腳本每 90 秒重試一次，共約 233 次機會
         # 成功建立 instance 後腳本自動 break 提前退出
         # 5 分鐘後 cron 觸發新 job，空窗極短
+        env:
+          PYTHONUNBUFFERED: "1"
         run: timeout 21000 python oci_retry.py || true
