@@ -1,0 +1,58 @@
+name: OCI ARM 搶機
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'    # 每 5 分鐘觸發一次（Job 跑 6 小時後才需要補）
+  workflow_dispatch:          # 可手動觸發
+
+concurrency:
+  group: oci-retry            # 同 group 只允許一個 Job 執行
+  cancel-in-progress: false   # 不取消正在跑的，新的排隊等候（最多 1 跑 + 1 等）
+
+jobs:
+  retry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355      # 接近 GitHub Actions 上限 6 小時
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install OCI SDK
+        run: pip install oci
+
+      - name: Set up OCI credentials
+        env:
+          OCI_USER:        ${{ secrets.OCI_USER }}
+          OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+          OCI_TENANCY:     ${{ secrets.OCI_TENANCY }}
+          OCI_REGION:      ${{ secrets.OCI_REGION }}
+          OCI_PRIVATE_KEY: ${{ secrets.OCI_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.oci
+
+          # 寫入 API 私密金鑰
+          printf '%s' "$OCI_PRIVATE_KEY" > ~/.oci/oci_api_key.pem
+          chmod 600 ~/.oci/oci_api_key.pem
+
+          # 寫入 config（key_file 使用絕對路徑）
+          cat > ~/.oci/config << EOF
+          [DEFAULT]
+          user=$OCI_USER
+          fingerprint=$OCI_FINGERPRINT
+          tenancy=$OCI_TENANCY
+          region=$OCI_REGION
+          key_file=/home/runner/.oci/oci_api_key.pem
+          EOF
+
+      - name: Run OCI retry script
+        # timeout 21000 = 350 分鐘（~5.8 小時），接近 job 上限前主動結束
+        # 腳本每 90 秒重試一次，共約 233 次機會
+        # 成功建立 instance 後腳本自動 break 提前退出
+        # 5 分鐘後 cron 觸發新 job，空窗極短
+        run: timeout 21000 python oci_retry.py || true

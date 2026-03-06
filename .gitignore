@@ -1,0 +1,9 @@
+# 私密金鑰（絕對不能上傳）
+*.pem
+*.key
+*.pub
+
+# Python 暫存
+__pycache__/
+*.pyc
+*.pyo
