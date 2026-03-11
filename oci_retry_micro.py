@@ -3,10 +3,10 @@ import time
 import datetime
 
 # ╔══════════════════════════════════════════════════════╗
-# ║  目標：VM.Standard.A1.Flex（ARM）                    ║
-# ║  規格：4 OCPU / 24 GB RAM / 200 GB 磁碟              ║
-# ║  架構：ARM (Ampere)                                  ║
-# ║  方案：Oracle Always Free（永久免費）                 ║
+# ║  目標：VM.Standard.E2.1.Micro（x86）                 ║
+# ║  規格：1 OCPU / 1 GB RAM / 預設 50 GB 磁碟           ║
+# ║  架構：x86（比 ARM 好搶）                             ║
+# ║  方案：Oracle Always Free（永久免費，每帳號最多 2 台）║
 # ║  OS  ：Canonical Ubuntu 22.04                        ║
 # ╚══════════════════════════════════════════════════════╝
 
@@ -14,7 +14,7 @@ import datetime
 COMPARTMENT_ID = (
     "ocid1.tenancy.oc1..aaaaaaaaaqij5zlnm3v5qprvdll3j7nc6o3dk4ykzerugzxe37ckajkpjxpa"  # 改成自己的租用戶 OCID
 )
-SSH_PUBLIC_KEY = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDdsLT/y7kupelr7rr+NcIyPVb4ZC20x9L5VuNMC5aYlXmSuqJQemXzdzfvp5F899CNdBe+TJJ+w55ka6C5J8vZTMmT4IfIOKZdJsKaTwOCbYTRz62PLcq90veNBPdn0kcnUxrqD3ReKxkKhyyL9WIWH1+4e945w9TL2wgr7Os0rYN5q/4Sa6ioof1I4NE9lGw+WL2yjOI0YLQXmWnvRb7qcQUdOCxgbOXw3GsPFwp3UZ+yJm8kbwFzJdTojaUeriuk3HQYFjzaOVN07kmf2vTQKSgsyw5B+BhyeYQmcRtNTNiriZ7skfS06/24ZM/hzLBz7/PQgw0DoRHDWB5YbyT1 ssh-key-2026-03-05"  # 改成自己的 SSH 公鑰（.pub 檔內容）
+SSH_PUBLIC_KEY = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCxPqVeut2vbwt8VVAvHDnEN+q61jrIAGD9cQgW6kTeLCjjzm9UHt2Flf1KoohSu+0YFvSn8+t67r9T9wfdP14WBfZAg531CCyUNTbF5KmkaHgmxftWu3FgY00BTnGa4YEEXdAGn3X953HzFKJDpJVJyWFfWXJUOWdfivTKlO+62SBnlIdcanckwA6rzr9dXNSYlasoVnuk+ujANjhnxf4TpKcI4AQrAmRJQ83lXfI2yExBMX+Qx/JNSA2/2XFRfT7OMgddExibCRpSyammfatNLUIM5s+ab6aeO3aNvVWGok6/dpYaBPbvndERQs6p9FQr88C/VFeEwHCtvMT8c2WB ssh-key-2026-03-07"  # 改成自己的 SSH 公鑰（.pub 檔內容）
 RETRY_INTERVAL = 90  # 秒
 # ────────────────────────────────────────────────────────
 
@@ -34,26 +34,25 @@ def get_availability_domain():
     return ads[0].name
 
 
-def get_ubuntu_arm_image():
+def get_ubuntu_x86_image():
     compute = oci.core.ComputeClient(config)
     images = compute.list_images(
         COMPARTMENT_ID,
         operating_system="Canonical Ubuntu",
         operating_system_version="22.04",
-        shape="VM.Standard.A1.Flex",
+        shape="VM.Standard.E2.1.Micro",
         sort_by="TIMECREATED",
         sort_order="DESC",
     ).data
     if not images:
-        raise Exception("找不到 Ubuntu 22.04 ARM 映像檔")
+        raise Exception("找不到 Ubuntu 22.04 x86 映像檔")
     return images[0].id
 
 
 def create_vcn_and_subnet():
     network = oci.core.VirtualNetworkClient(config)
 
-    # 檢查 VCN 是否已存在
-    vcns = network.list_vcns(COMPARTMENT_ID, display_name="retry-vcn").data
+    vcns = network.list_vcns(COMPARTMENT_ID, display_name="retry-vcn-micro").data
     if vcns:
         vcn = vcns[0]
         print(f"使用既有 VCN: {vcn.id}")
@@ -61,23 +60,21 @@ def create_vcn_and_subnet():
         vcn = network.create_vcn(
             oci.core.models.CreateVcnDetails(
                 compartment_id=COMPARTMENT_ID,
-                display_name="retry-vcn",
-                cidr_block="10.0.0.0/16",
+                display_name="retry-vcn-micro",
+                cidr_block="10.1.0.0/16",
             )
         ).data
         print(f"建立 VCN: {vcn.id}")
 
-        # 建立 Internet Gateway
         ig = network.create_internet_gateway(
             oci.core.models.CreateInternetGatewayDetails(
                 compartment_id=COMPARTMENT_ID,
                 vcn_id=vcn.id,
-                display_name="retry-ig",
+                display_name="retry-ig-micro",
                 is_enabled=True,
             )
         ).data
 
-        # 設定路由表（讓流量可以出去）
         network.update_route_table(
             vcn.default_route_table_id,
             oci.core.models.UpdateRouteTableDetails(
@@ -90,7 +87,6 @@ def create_vcn_and_subnet():
             ),
         )
 
-        # 開放 SSH / HTTP / HTTPS / Streamlit 入站
         security_lists = network.list_security_lists(COMPARTMENT_ID, vcn_id=vcn.id).data
         if security_lists:
             existing_egress = security_lists[0].egress_security_rules
@@ -115,9 +111,8 @@ def create_vcn_and_subnet():
                 ),
             )
 
-    # 檢查子網路是否已存在
     subnets = network.list_subnets(
-        COMPARTMENT_ID, vcn_id=vcn.id, display_name="retry-subnet"
+        COMPARTMENT_ID, vcn_id=vcn.id, display_name="retry-subnet-micro"
     ).data
     if subnets:
         subnet = subnets[0]
@@ -127,8 +122,8 @@ def create_vcn_and_subnet():
             oci.core.models.CreateSubnetDetails(
                 compartment_id=COMPARTMENT_ID,
                 vcn_id=vcn.id,
-                display_name="retry-subnet",
-                cidr_block="10.0.0.0/24",
+                display_name="retry-subnet-micro",
+                cidr_block="10.1.0.0/24",
                 prohibit_public_ip_on_vnic=False,
             )
         ).data
@@ -142,16 +137,11 @@ def try_create_instance(subnet_id, ad_name, image_id):
     instance = compute.launch_instance(
         oci.core.models.LaunchInstanceDetails(
             compartment_id=COMPARTMENT_ID,
-            display_name="streamlit-server",
+            display_name="micro-server",
             availability_domain=ad_name,
-            shape="VM.Standard.A1.Flex",
-            shape_config=oci.core.models.LaunchInstanceShapeConfigDetails(
-                ocpus=4,
-                memory_in_gbs=24,
-            ),
+            shape="VM.Standard.E2.1.Micro",
             source_details=oci.core.models.InstanceSourceViaImageDetails(
                 image_id=image_id,
-                boot_volume_size_in_gbs=200,
             ),
             create_vnic_details=oci.core.models.CreateVnicDetails(
                 subnet_id=subnet_id,
@@ -171,8 +161,8 @@ def main():
     ad_name = get_availability_domain()
     print(f"AD: {ad_name}")
 
-    print("取得 Ubuntu 22.04 ARM 映像檔...")
-    image_id = get_ubuntu_arm_image()
+    print("取得 Ubuntu 22.04 x86 映像檔...")
+    image_id = get_ubuntu_x86_image()
     print(f"Image ID: {image_id}")
 
     attempt = 0

@@ -1,4 +1,4 @@
-name: OCI ARM 搶機
+name: OCI Micro 搶機
 
 on:
   schedule:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:          # 可手動觸發
 
 concurrency:
-  group: oci-retry            # 同 group 只允許一個 Job 執行
+  group: oci-retry-micro      # 與 ARM workflow 分開，互不干擾
   cancel-in-progress: false   # 不取消正在跑的，新的排隊等候（最多 1 跑 + 1 等）
 
 jobs:
@@ -52,12 +52,12 @@ jobs:
 
       - name: Run OCI retry script
         # 腳本成功（exit 0）→ 下一步自動停用 workflow
-        # timeout 到期（exit 124）→ 視為 failure，下一步不執行
+        # timeout 到期（exit 124）→ 視為 failure，觸發下一個 Job
         id: run_script
         continue-on-error: true
         env:
           PYTHONUNBUFFERED: "1"
-        run: timeout 21000 python oci_retry.py
+        run: timeout 21000 python oci_retry_micro.py
 
       - name: 成功後自動停用 workflow
         if: steps.run_script.outcome == 'success'
@@ -65,7 +65,7 @@ jobs:
           curl -s -X PUT \
             -H "Authorization: token ${{ secrets.GH_PAT }}" \
             -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/${{ github.repository }}/actions/workflows/oci_retry.yml/disable
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/oci_retry_micro.yml/disable
           echo "Workflow 已自動停用"
 
       - name: 觸發下一個 Job（無縫接力）
@@ -74,6 +74,6 @@ jobs:
           curl -s -X POST \
             -H "Authorization: token ${{ secrets.GH_PAT }}" \
             -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/${{ github.repository }}/actions/workflows/oci_retry.yml/dispatches \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/oci_retry_micro.yml/dispatches \
             -d '{"ref":"main"}'
           echo "已觸發下一個 Job"
