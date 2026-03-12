@@ -1,9 +1,7 @@
 name: OCI ARM 搶機
 
 on:
-  schedule:
-    - cron: '0 */12 * * *'  # 每 12 小時備用觸發（防止自觸發鏈條中斷）
-  workflow_dispatch:          # 可手動觸發
+  workflow_dispatch:  # 只能手動觸發
 
 concurrency:
   group: oci-retry            # 同 group 只允許一個 Job 執行
