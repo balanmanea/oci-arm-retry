@@ -21,9 +21,25 @@ SSH_PUBLIC_KEY = "ssh-rsa AAAA...你的公開金鑰內容"
 RETRY_INTERVAL = 90  # 重試間隔（秒）
 ```
 
-**取得 Compartment ID**：Oracle Cloud 主控台 → 右上角頭像 → **我的設定檔** → 複製**租用戶 OCID**
+### 取得 Compartment ID（租用戶 OCID）
 
-**取得 SSH 公開金鑰**：在本機執行 `ssh-keygen`，複製 `.pub` 檔的完整內容（`ssh-rsa AAAA...` 開頭）
+**用途**：告訴 Oracle 要在哪個帳號下建立資源
+
+1. Oracle Cloud 主控台 → 右上角頭像 → **我的設定檔**
+2. 或：左上角選單 → **身份識別與安全** → **區間** → 點 root
+3. 複製 OCID（格式：`ocid1.tenancy.oc1..xxxxxx`）
+
+### 取得 SSH 公開金鑰
+
+**用途**：建立 instance 後用來 SSH 連線進入 server
+
+1. 在 Oracle Cloud 建立 instance 時，選「**產生金鑰對**」
+2. 下載兩個檔案：
+   - `*.key` 或 `*.pem`（私密金鑰，自己保管，連線時用）
+   - `*.pub`（公開金鑰，填入腳本）
+3. 用記事本開啟 `.pub` 檔，複製全部內容（格式：`ssh-rsa AAAA...` 開頭）
+
+或在本機執行 `ssh-keygen` 自己產生。
 
 ---
 
@@ -43,7 +59,9 @@ python oci_retry.py
 python oci_retry_micro.py
 ```
 
-本機執行需要 OCI 設定檔：`C:\Users\你的帳號\.oci\config`
+### 本機執行需要 OCI 設定檔
+
+**儲存位置**：`C:\Users\你的帳號\.oci\config`（建立資料夾和檔案，檔案無副檔名）
 
 ```
 [DEFAULT]
@@ -53,6 +71,23 @@ tenancy=ocid1.tenancy.oc1..xxxxxx
 region=ap-singapore-1
 key_file=C:\Users\你的帳號\Desktop\私密金鑰.pem
 ```
+
+**取得設定檔內容**：
+1. Oracle Cloud 主控台 → 右上角頭像 → **我的設定檔**
+2. 左側選單 → **API 金鑰** → **新增 API 金鑰**
+3. 選「**產生 API 金鑰對**」→ 下載私密金鑰（`.pem` 檔）
+4. 按「新增」→ 複製出現的設定文字，貼入 `config` 檔
+5. 把 `key_file` 的路徑改成 `.pem` 檔的實際存放位置
+
+### 腳本執行行為
+
+| 狀態 | 說明 |
+|------|------|
+| 初始化 | 自動建立 VCN + 子網路（已存在則跳過）|
+| 搶機循環 | 每隔 `RETRY_INTERVAL` 秒嘗試一次 |
+| 容量不足 | 印出 ❌ 並繼續重試 |
+| 網路逾時 | 印出 ⚠️ 並繼續重試（不會當掉）|
+| 成功 | 印出 ✅ instance ID 並自動停止 |
 
 ---
 
