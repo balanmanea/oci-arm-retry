@@ -53,7 +53,7 @@ def create_vcn_and_subnet():
     network = oci.core.VirtualNetworkClient(config)
 
     # 檢查 VCN 是否已存在
-    vcns = network.list_vcns(COMPARTMENT_ID, display_name="retry-vcn").data
+    vcns = network.list_vcns(COMPARTMENT_ID, display_name="vcn-20260112-1536").data
     if vcns:
         vcn = vcns[0]
         print(f"使用既有 VCN: {vcn.id}")
