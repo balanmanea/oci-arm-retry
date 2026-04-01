@@ -1,67 +1,67 @@
-# OCI（Oracle Cloud Infrastructure）免費 VM 搶機腳本
+# OCI (Oracle Cloud Infrastructure) Free VM Grabber Script
 
-## 兩種腳本
+## Two Types of Scripts
 
-| 腳本 | 目標機型 | 規格 | 架構 |
-|------|---------|------|------|
-| `oci_retry.py` | VM.Standard.A1.Flex | 4 OCPU / 24 GB RAM / 200 GB 磁碟 | ARM (Ampere) |
-| `oci_retry_micro.py` | VM.Standard.E2.1.Micro | 1 OCPU / 1 GB RAM / 50 GB 磁碟 | x86 |
+| Script | Target Instance Type | Specifications | Architecture |
+|--------|---------------------|-----------------|--------------|
+| `oci_retry.py` | VM.Standard.A1.Flex | 4 OCPU / 24 GB RAM / 200 GB Disk | ARM (Ampere) |
+| `oci_retry_micro.py` | VM.Standard.E2.1.Micro | 1 OCPU / 1 GB RAM / 50 GB Disk | x86 |
 
-兩種都是 Oracle Always Free 永久免費方案。每帳號最多 4 OCPU ARM（可拆成多台）+ 2 台 Micro。
+Both are part of Oracle's Always Free perpetual free tier. Each account can have up to 4 OCPU ARM (can be split into multiple instances) + 2 Micro instances.
 
 ---
 
-## 腳本設定
+## Script Configuration
 
-開啟腳本，修改最上方的兩個變數：
+Open the script and modify the two variables at the top:
 
 ```python
-COMPARTMENT_ID = "ocid1.tenancy.oc1..你的OCID"
-SSH_PUBLIC_KEY = "ssh-rsa AAAA...你的公開金鑰內容"
-RETRY_INTERVAL = 90  # 重試間隔（秒）
+COMPARTMENT_ID = "ocid1.tenancy.oc1..your_OCID"
+SSH_PUBLIC_KEY = "ssh-rsa AAAA...your_public_key_content"
+RETRY_INTERVAL = 90  # Retry interval (seconds)
 ```
 
-### 取得 Compartment ID（租用戶 OCID）
+### Getting Compartment ID (Tenancy OCID)
 
-**用途**：告訴 Oracle 要在哪個帳號下建立資源
+**Purpose**: Tell Oracle which account to create resources under
 
-1. Oracle Cloud 主控台 → 右上角頭像 → **我的設定檔**
-2. 或：左上角選單 → **身份識別與安全** → **區間** → 點 root
-3. 複製 OCID（格式：`ocid1.tenancy.oc1..xxxxxx`）
+1. Oracle Cloud Console → Avatar (top right) → **My Profile**
+2. Or: Menu (top left) → **Identity & Security** → **Compartments** → Click root
+3. Copy the OCID (format: `ocid1.tenancy.oc1..xxxxxx`)
 
-### 取得 SSH 公開金鑰
+### Getting SSH Public Key
 
-**用途**：建立 instance 後用來 SSH 連線進入 server
+**Purpose**: Used for SSH connection after the instance is created
 
-1. 在 Oracle Cloud 建立 instance 時，選「**產生金鑰對**」
-2. 下載兩個檔案：
-   - `*.key` 或 `*.pem`（私密金鑰，自己保管，連線時用）
-   - `*.pub`（公開金鑰，填入腳本）
-3. 用記事本開啟 `.pub` 檔，複製全部內容（格式：`ssh-rsa AAAA...` 開頭）
+1. When creating an instance in Oracle Cloud, select "**Generate Key Pair**"
+2. Download two files:
+   - `*.key` or `*.pem` (Private key, keep it safe, used for connection)
+   - `*.pub` (Public key, paste into script)
+3. Open the `.pub` file with a text editor, copy all content (format starts with `ssh-rsa AAAA...`)
 
-或在本機執行 `ssh-keygen` 自己產生。
+Or generate your own using `ssh-keygen` on your local machine.
 
 ---
 
-## 本機執行
+## Running Locally
 
 ```bash
-# 安裝套件（只需一次）
+# Install package (only once)
 pip install oci
 
-# Windows 切換到資料夾
+# Windows: Navigate to folder
 cd /d D:\Projects\oci_arm_retry
 
-# 執行 ARM 版
+# Run ARM version
 python oci_retry.py
 
-# 執行 Micro 版
+# Run Micro version
 python oci_retry_micro.py
 ```
 
-### 本機執行需要 OCI 設定檔
+### Local Execution Requires OCI Config File
 
-**儲存位置**：`C:\Users\你的帳號\.oci\config`（建立資料夾和檔案，檔案無副檔名）
+**Location**: `C:\Users\your_account\.oci\config` (create the folder and file, no file extension)
 
 ```
 [DEFAULT]
@@ -69,130 +69,130 @@ user=ocid1.user.oc1..xxxxxx
 fingerprint=xx:xx:xx:xx:xx
 tenancy=ocid1.tenancy.oc1..xxxxxx
 region=ap-singapore-1
-key_file=C:\Users\你的帳號\Desktop\私密金鑰.pem
+key_file=C:\Users\your_account\Desktop\private_key.pem
 ```
 
-**取得設定檔內容**：
-1. Oracle Cloud 主控台 → 右上角頭像 → **我的設定檔**
-2. 左側選單 → **API 金鑰** → **新增 API 金鑰**
-3. 選「**產生 API 金鑰對**」→ 下載私密金鑰（`.pem` 檔）
-4. 按「新增」→ 複製出現的設定文字，貼入 `config` 檔
-5. 把 `key_file` 的路徑改成 `.pem` 檔的實際存放位置
+**Getting Config File Content**:
+1. Oracle Cloud Console → Avatar (top right) → **My Profile**
+2. Left menu → **API Keys** → **Add API Key**
+3. Select "**Generate API Key Pair**" → Download private key (`.pem` file)
+4. Click "Add" → Copy the configuration text that appears, paste into `config` file
+5. Change the `key_file` path to the actual location of your `.pem` file
 
-### 腳本執行行為
+### Script Execution Behavior
 
-| 狀態 | 說明 |
-|------|------|
-| 初始化 | 自動建立 VCN + 子網路（已存在則跳過）|
-| 搶機循環 | 每隔 `RETRY_INTERVAL` 秒嘗試一次 |
-| 容量不足 | 印出 ❌ 並繼續重試 |
-| 網路逾時 | 印出 ⚠️ 並繼續重試（不會當掉）|
-| 成功 | 印出 ✅ instance ID 並自動停止 |
+| Status | Description |
+|--------|-------------|
+| Initialization | Automatically creates VCN + subnet (skips if exists) |
+| Grab Loop | Attempts once every `RETRY_INTERVAL` seconds |
+| Capacity Unavailable | Prints ❌ and continues retrying |
+| Network Timeout | Prints ⚠️ and continues retrying (won't crash) |
+| Success | Prints ✅ instance ID and stops automatically |
 
 ---
 
-## GitHub Actions 自動搶機（推薦）
+## GitHub Actions Auto-Grab (Recommended)
 
-不需要電腦一直開著，24 小時不間斷自動重試。
+No need to keep your computer on. Retries automatically 24/7.
 
-### 運作方式
+### How It Works
 
 ```
-Job 開始
-  └─ 每 90 秒嘗試一次，持續約 350 分鐘（~233 次）
-       ├─ 搶到了 → 自動停用 workflow，結束
-       └─ timeout → 立刻觸發下一個 Job，空窗幾乎為零
-                        └─ 重複循環...
+Job starts
+  └─ Attempts every 90 seconds, runs for ~350 minutes (~233 attempts)
+       ├─ Success → Automatically disables workflow, done
+       └─ timeout → Immediately triggers next Job, almost zero downtime
+                        └─ Repeats...
 
-鏈條中斷時：手動到 Actions 頁籤再按一次 Run workflow
+Chain breaks: Manually click "Run workflow" in Actions tab
 ```
 
-| 項目 | 說明 |
-|------|------|
-| 每次 Job 持續時間 | 約 350 分鐘（~233 次嘗試）|
-| 接力方式 | Job 結束時自動觸發下一個，空窗幾乎為零 |
-| 同時執行上限 | 最多 1 個跑 + 1 個排隊（不會累積）|
-| 鏈條中斷時 | 手動到 Actions 頁籤再按一次 Run workflow |
-| 搶到後 | workflow 自動停用，完全不需要手動操作 |
-| ARM 與 Micro | 各自獨立 workflow，可同時執行互不干擾 |
+| Item | Description |
+|------|-------------|
+| Job Duration | ~350 minutes (~233 attempts) |
+| Relay Method | Next job triggers when current ends, almost zero downtime |
+| Concurrent Limit | Max 1 running + 1 queued (no accumulation) |
+| Chain Breaks | Manually click "Run workflow" in Actions tab |
+| After Success | Workflow automatically disables, no manual action needed |
+| ARM & Micro | Independent workflows, can run simultaneously without interference |
 
 ---
 
-## 設定步驟
+## Configuration Steps
 
-### Step 1：建立 GitHub 倉庫
+### Step 1: Create GitHub Repository
 
-建立 **public** 倉庫（public 才有無限制的 Actions 分鐘數）。
+Create a **public** repository (public has unlimited Actions minutes).
 
-### Step 2：產生 OCI API 金鑰
+### Step 2: Generate OCI API Key
 
-1. Oracle Cloud 主控台 → 右上角頭像 → **我的設定檔**
-2. 左側選單 → **API 金鑰** → **新增 API 金鑰**
-3. 選「**產生 API 金鑰對**」→ 下載私密金鑰（`.pem` 檔）
-4. 按「新增」後複製出現的設定文字，從中取得以下值：
-   - `user`、`fingerprint`、`tenancy`、`region`
+1. Oracle Cloud Console → Avatar (top right) → **My Profile**
+2. Left menu → **API Keys** → **Add API Key**
+3. Select "**Generate API Key Pair**" → Download private key (`.pem` file)
+4. Click "Add" → Copy the configuration text, extract these values:
+   - `user`, `fingerprint`, `tenancy`, `region`
 
-### Step 3：建立 GitHub Personal Access Token（PAT）
+### Step 3: Create GitHub Personal Access Token (PAT)
 
-PAT 讓 workflow 搶到機器後能自動停用自己、或接力觸發下一個 Job。
+PAT allows the workflow to automatically disable itself after grabbing an instance or trigger the next job.
 
-1. GitHub → 右上角頭像 → **Settings**
-2. 左側最下方 → **Developer settings**
+1. GitHub → Avatar (top right) → **Settings**
+2. Bottom of left menu → **Developer settings**
 3. **Personal access tokens** → **Tokens (classic)**
 4. **Generate new token (classic)**
-5. 填寫：
-   - **Note**：隨意命名，例如 `oci-retry`
-   - **Expiration**：依需求設定（建議 90 天或 No expiration）
-   - **Scopes**：勾選 **`workflow`**（必須勾，才能操作 workflow）
-6. 點 **Generate token** → **立刻複製**產生的 token（只顯示一次）
+5. Fill in:
+   - **Note**: Name it anything, e.g., `oci-retry`
+   - **Expiration**: Set as needed (recommend 90 days or No expiration)
+   - **Scopes**: Check **`workflow`** (required to manage workflows)
+6. Click **Generate token** → **Copy immediately** (shown only once)
 
-### Step 4：設定 GitHub Secrets
+### Step 4: Configure GitHub Secrets
 
-到倉庫 → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
+Go to Repository → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
 
-共需設定 **6 個** secret：
+Need to set **6** secrets total:
 
-| Secret 名稱 | 填入的值 | 取得位置 |
-|------------|---------|----------|
-| `OCI_USER` | `ocid1.user.oc1..xxxxxx` | OCI 主控台 → 我的設定檔 → OCID |
-| `OCI_FINGERPRINT` | `xx:xx:xx:xx:xx` | OCI 主控台 → 我的設定檔 → API 金鑰 → 指紋 |
-| `OCI_TENANCY` | `ocid1.tenancy.oc1..xxxxxx` | OCI 主控台 → 我的設定檔 → 租用戶 OCID |
-| `OCI_REGION` | 例如 `ap-singapore-1` | OCI 主控台右上角區域名稱 |
-| `OCI_PRIVATE_KEY` | `.pem` 檔案完整內容 | 開啟 Step 2 下載的 `.pem` 檔，複製全部文字（含頭尾 `-----BEGIN/END PRIVATE KEY-----`）|
-| `GH_PAT` | GitHub Personal Access Token | Step 3 產生的 token |
+| Secret Name | Value | Where to Get |
+|-------------|-------|--------------|
+| `OCI_USER` | `ocid1.user.oc1..xxxxxx` | OCI Console → My Profile → OCID |
+| `OCI_FINGERPRINT` | `xx:xx:xx:xx:xx` | OCI Console → My Profile → API Keys → Fingerprint |
+| `OCI_TENANCY` | `ocid1.tenancy.oc1..xxxxxx` | OCI Console → My Profile → Tenancy OCID |
+| `OCI_REGION` | e.g., `ap-singapore-1` | OCI Console, region name (top right) |
+| `OCI_PRIVATE_KEY` | Full `.pem` file content | Open `.pem` from Step 2, copy all text (including `-----BEGIN/END PRIVATE KEY-----`) |
+| `GH_PAT` | GitHub Personal Access Token | Token from Step 3 |
 
-### Step 5：推送程式碼到 GitHub
+### Step 5: Push Code to GitHub
 
 ```bash
-git remote add origin https://github.com/你的帳號/你的倉庫名稱.git
+git remote add origin https://github.com/your_account/your_repo_name.git
 git branch -M main
 git push -u origin main
 ```
 
-### Step 6：啟動 workflow
+### Step 6: Start Workflow
 
-1. 到倉庫 → **Actions** 頁籤
-2. 若 workflow 顯示停用，點 **Enable workflow**
-3. 點 **Run workflow** 手動立刻觸發第一次
+1. Go to Repository → **Actions** tab
+2. If workflow shows as disabled, click **Enable workflow**
+3. Click **Run workflow** to trigger the first run manually
 
-ARM 和 Micro 各自有獨立的 workflow，可以同時啟動。
+ARM and Micro each have independent workflows and can be started simultaneously.
 
 ---
 
-## 成功後
+## After Success
 
-搶到 instance 後，workflow 會**自動停用**，不需要任何手動操作。
+After grabbing an instance, the workflow will **automatically disable** with no manual action needed.
 
-到 Oracle Cloud 主控台 → **執行處理** → 查看公用 IP，即可 SSH 連線：
+Go to Oracle Cloud Console → **Compute Instances** → Check public IP and SSH:
 
 ```bash
-ssh -i 私密金鑰.pem ubuntu@公用IP
+ssh -i private_key.pem ubuntu@public_IP
 ```
 
 ---
 
-## 注意事項
+## Important Notes
 
-- `COMPARTMENT_ID` 和 `SSH_PUBLIC_KEY` 寫在腳本裡是安全的（非機密資訊）
-- OCI API 私密金鑰、PAT 等敏感資訊全部放在 GitHub Secrets，不進版本控制
-- `.pem` / `.key` / `.pub` 已加入 `.gitignore`，不會被 commit
+- `COMPARTMENT_ID` and `SSH_PUBLIC_KEY` in the script are safe (non-sensitive)
+- OCI API private key, PAT, and other sensitive info go in GitHub Secrets, not version control
+- `.pem` / `.key` / `.pub` are already in `.gitignore`, won't be committed
