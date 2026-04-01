@@ -12,9 +12,9 @@ import datetime
 
 # ─── 設定 ───────────────────────────────────────────────
 COMPARTMENT_ID = (
-    "ocid1.tenancy.oc1..aaaaaaaaaqij5zlnm3v5qprvdll3j7nc6o3dk4ykzerugzxe37ckajkpjxpa"  # 改成自己的租用戶 OCID
+    "ocid1.user.oc1..aaaaaaaajprxvuhh4cwapu2mul35zxmjp6chuqvjw7phtmkm3tdrx7hzcaka"  # 改成自己的租用戶 OCID
 )
-SSH_PUBLIC_KEY = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDdsLT/y7kupelr7rr+NcIyPVb4ZC20x9L5VuNMC5aYlXmSuqJQemXzdzfvp5F899CNdBe+TJJ+w55ka6C5J8vZTMmT4IfIOKZdJsKaTwOCbYTRz62PLcq90veNBPdn0kcnUxrqD3ReKxkKhyyL9WIWH1+4e945w9TL2wgr7Os0rYN5q/4Sa6ioof1I4NE9lGw+WL2yjOI0YLQXmWnvRb7qcQUdOCxgbOXw3GsPFwp3UZ+yJm8kbwFzJdTojaUeriuk3HQYFjzaOVN07kmf2vTQKSgsyw5B+BhyeYQmcRtNTNiriZ7skfS06/24ZM/hzLBz7/PQgw0DoRHDWB5YbyT1 ssh-key-2026-03-05"  # 改成自己的 SSH 公鑰（.pub 檔內容）
+SSH_PUBLIC_KEY = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDpPH1xupFgGhFcgf5SGczz4bnUqWiY9ByrTM+V33Rw8IzEfxeD9c3WL9XfKZu4ks6WQJd/0ZvREukf9AbKCZ1AGBwEbtRFsGLW0q6CkjFZWidp4Ce6RSoucssk2DHalpUJrjcu5xkw6KCEEV8RtUYKTkbKs3yorY/Vfj0/d/CRt5yVDoaM+fDRL1moweD5HR/clVl8wdc/3y/IzRCkrLK/qfIOrYM+1WsxrFOgs3AyG1S3+1JKY5DLDPT/sGm/e+/K2tp58ptVA8dk7A24RICGX5hXx8d358Jo6uNFFH+S6bD1LJyeJye/guflt0md1wfG+Z8Bl7MHs5pIllAC5Q7v imported-openssh-key"  # 改成自己的 SSH 公鑰（.pub 檔內容）
 RETRY_INTERVAL = 90  # 秒
 # ────────────────────────────────────────────────────────
 
