@@ -53,7 +53,7 @@ def create_vcn_and_subnet():
     network = oci.core.VirtualNetworkClient(config)
 
     # 檢查 VCN 是否已存在
-    vcns = network.list_vcns(COMPARTMENT_ID, display_name="retry-vnc").data
+    vcns = network.list_vcns(COMPARTMENT_ID, display_name="vcn-20260112-1536").data
     if vcns:
         vcn = vcns[0]
         print(f"使用既有 VCN: {vcn.id}")
@@ -117,7 +117,7 @@ def create_vcn_and_subnet():
 
     # 檢查子網路是否已存在
     subnets = network.list_subnets(
-        COMPARTMENT_ID, vcn_id=vcn.id, display_name="retry-subnet"
+        COMPARTMENT_ID, vcn_id=vcn.id, display_name="retry-subnet1"
     ).data
     if subnets:
         subnet = subnets[0]
@@ -127,7 +127,7 @@ def create_vcn_and_subnet():
             oci.core.models.CreateSubnetDetails(
                 compartment_id=COMPARTMENT_ID,
                 vcn_id=vcn.id,
-                display_name="retry-subnet",
+                display_name="retry-subnet1",
                 cidr_block="10.0.0.0/24",
                 prohibit_public_ip_on_vnic=False,
             )
